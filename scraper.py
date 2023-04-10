@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import math
 
 import os
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -15,8 +16,6 @@ min_ppm = 0
 max_ppm = 4000
 max_pppw = 250
 bedrooms = 4
-
-
 
 class RightmoveScraper:
     def __init__(self, min_price, max_price, num_bedrooms):
@@ -59,7 +58,7 @@ class RightmoveScraper:
         yesterday = datetime.now() - timedelta(days=1) # Calculate yesterday's date
         df['date_added'] = df['date_added'].replace('Added yesterday', yesterday.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Added today', today.strftime('%d/%m/%Y'))
-        df['date_added'] = pd.to_datetime(df['date_added'])
+        df['date_added'] = pd.to_datetime(df['date_added'], format='%d/%m/%Y')
         
         df['pricepm'] = df['pricepm'].astype(int)
         df['pricepw'] = df['pricepw'].astype(int)
@@ -102,7 +101,7 @@ UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
 # discord bot
 load_dotenv()
 
-bot = commands.Bot(command_prefix='!')
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 @bot.event
@@ -139,7 +138,7 @@ async def rescrape(ctx):
         return
     else:
         await ctx.send("new properties found and added to rightmove:")
-        await ctx.send(UHProperties.compare(latest).to_string())
+        await ctx.send(latest[~latest.isin(RMProperties)].dropna().to_string())
         UHProperties = latest
         await ctx.send("added new properties on unihomes")
 
@@ -152,7 +151,7 @@ async def manual_rescrape(ctx):
         return
     else:
         await ctx.send("new properties found and added to unihomes:")
-        await ctx.send(UHProperties.compare(latest).to_string())
+        await ctx.send(latest[~latest.isin(UHProperties)].dropna().to_string())
         UHProperties = latest
         await ctx.send("added new properties on unihomes")
 
@@ -171,12 +170,12 @@ async def auto_rescrape():
 
     global UHProperties 
     UHlatest = UniHomesScraper(max_pppw, bedrooms).scrape()
-    new_UHproperties = UHProperties.compare(UHlatest)
+    new_UHproperties = UHlatest[~UHlatest.isin(UHProperties).dropna()]
     no_of_new_UH = len(new_UHproperties)
 
     global RMProperties
     RMlatest = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
-    new_RMproperties = RMProperties.compare(RMlatest)
+    new_RMproperties = RMlatest[~RMlatest.isin(RMProperties).dropna()]
     no_of_new_RM = len(new_RMproperties)
 
     if (UHProperties.equals(UHlatest)):
