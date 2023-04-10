@@ -7,8 +7,9 @@ import math
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
-import random
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
 
 min_ppm = 0
 max_ppm = 4000
@@ -112,40 +113,93 @@ async def on_ready():
         print(guild)
 
 
-@bot.command(name='RMlatest')
+@bot.command(name='RMlatest', help='returns the last posted property found on rightmove')
 async def scrapeRM(ctx):
     print('rightmoving')
     response = RMProperties.iloc[0]
     await ctx.send(response.to_string())
 
-@bot.command(name='UHlatest')
+@bot.command(name='UHlatest', help='returns the first property found on unihomes (note, not necessarily the most recent)')
 async def scrapeUH(ctx):
     print('unihoming')
     response = UHProperties.iloc[0]
     await ctx.send(response.to_string())
 
-@bot.command(name='nuke')
+@bot.command(name='nuke',  help='deletes all messages in the channel (use with caution!)')
 async def nuke(ctx):
+    print('nuking')
     await ctx.channel.purge()
 
-@bot.command(name="update")
+@bot.command(name="RMupdate", help="checks for new properties on rightmove and adds them to the list (if any)")
 async def rescrape(ctx):
     global RMProperties 
-    RMProperties = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
-    global UHProperties
-    UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
-    await ctx.send("updated latest properties")
+    latest = UniHomesScraper(max_pppw, bedrooms).scrape()
+    if (RMProperties.equals(RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape())):
+        await ctx.send("no new properties on rightmove")
+        return
+    else:
+        await ctx.send("new properties found and added to rightmove:")
+        await ctx.send(UHProperties.compare(latest).to_string())
+        UHProperties = latest
+        await ctx.send("added new properties on unihomes")
 
-@bot.command(name="unihomes")
+@bot.command(name="UHupdate", help="checks for new properties on unihomes and adds them to the list (if any)")
+async def manual_rescrape(ctx):
+    global UHProperties 
+    latest = UniHomesScraper(max_pppw, bedrooms).scrape()
+    if (UHProperties.equals(latest)):
+        await ctx.send("no new properties on unihomes")
+        return
+    else:
+        await ctx.send("new properties found and added to unihomes:")
+        await ctx.send(UHProperties.compare(latest).to_string())
+        UHProperties = latest
+        await ctx.send("added new properties on unihomes")
+
+
+@bot.command(name="unihomes", help="returns all properties on unihomes")
 async def unihomes(ctx):
     await ctx.send(UHProperties.to_string())
 
+@bot.command(name="autorescrapetest", help="tests the autorescrape function (use with caution!)")
+async def auto_rescrape_test(ctx):
+    await auto_rescrape()
+
+
+async def auto_rescrape():
+    channel = bot.get_channel(1095004643215560735)
+
+    global UHProperties 
+    UHlatest = UniHomesScraper(max_pppw, bedrooms).scrape()
+    new_UHproperties = UHProperties.compare(UHlatest)
+    no_of_new_UH = len(new_UHproperties)
+
+    global RMProperties
+    RMlatest = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
+    new_RMproperties = RMProperties.compare(RMlatest)
+    no_of_new_RM = len(new_RMproperties)
+
+    if (UHProperties.equals(UHlatest)):
+        await channel.send("no new properties on unihomes")
+    else:
+        await channel.send(str(no_of_new_UH) + "new properties found and added to unihomes:")
+        await channel.send(new_UHproperties.to_string())
+        UHProperties = UHlatest
+    
+    if (RMProperties.equals(RMlatest)):
+        await channel.send("no new properties on rightmove")
+    else:
+        await channel.send(str(no_of_new_RM) + "new properties found and added to rightmove:")
+        await channel.send(new_RMproperties.to_string())
+        RMProperties = RMlatest
+    
+    await channel.send("automatically refreshed properties. next update in 12h")
+
+#scheduler to update properties every 12h
+scheduler = AsyncIOScheduler()
+scheduler.add_job(auto_rescrape, 'interval', hours=12)
+scheduler.start()
+
+
 bot.run(TOKEN)
-print('hey')
-
-
-
-# print("Rightmove")
-# print(RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape())
-# print("UniHomes")
-# print(UniHomesScraper(max_pppw, bedrooms).scrape())
+print('   hey :3')
