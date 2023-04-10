@@ -4,6 +4,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 import math
 
+import os
+from discord.ext import commands
+from dotenv import load_dotenv
+import random
+
+
 min_ppm = 0
 max_ppm = 4000
 max_pppw = 250
@@ -87,9 +93,59 @@ class UniHomesScraper:
         
         df = pd.DataFrame(properties)
         return df
-        
 
-print("Rightmove")
-print(RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape())
-print("UniHomes")
-print(UniHomesScraper(max_pppw, bedrooms).scrape())
+#get and store latest properties
+RMProperties = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
+UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
+
+# discord bot
+load_dotenv()
+
+bot = commands.Bot(command_prefix='!')
+TOKEN = os.getenv('DISCORD_TOKEN')
+
+@bot.event
+async def on_ready():
+    print(f'{bot.user.name} has connected to Discord!')
+    print(f'{bot.user.name} is connected to the following guilds:\n')
+    for guild in bot.guilds:
+        print(guild)
+
+
+@bot.command(name='RMlatest')
+async def scrapeRM(ctx):
+    print('rightmoving')
+    response = RMProperties.iloc[0]
+    await ctx.send(response.to_string())
+
+@bot.command(name='UHlatest')
+async def scrapeUH(ctx):
+    print('unihoming')
+    response = UHProperties.iloc[0]
+    await ctx.send(response.to_string())
+
+@bot.command(name='nuke')
+async def nuke(ctx):
+    await ctx.channel.purge()
+
+@bot.command(name="update")
+async def rescrape(ctx):
+    global RMProperties 
+    RMProperties = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
+    global UHProperties
+    UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
+    await ctx.send("updated latest properties")
+
+@bot.command(name="unihomes")
+async def unihomes(ctx):
+    await ctx.send(UHProperties.to_string())
+
+bot.run(TOKEN)
+print('hey')
+
+
+
+# print("Rightmove")
+# print(RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape())
+# print("UniHomes")
+# print(UniHomesScraper(max_pppw, bedrooms).scrape())
