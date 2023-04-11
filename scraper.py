@@ -1,7 +1,7 @@
 import requests 
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 
 import os
@@ -58,6 +58,7 @@ class RightmoveScraper:
         yesterday = datetime.now() - timedelta(days=1) # Calculate yesterday's date
         df['date_added'] = df['date_added'].replace('Added yesterday', yesterday.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Added today', today.strftime('%d/%m/%Y'))
+        df['date_added'] = df['date_added'].replace('Reduced today', today.strftime('%d/%m/%Y'))
         df['date_added'] = pd.to_datetime(df['date_added'], format='%d/%m/%Y')
         
         df['pricepm'] = df['pricepm'].astype(int)
@@ -97,8 +98,9 @@ class UniHomesScraper:
 #get and store latest properties
 RMProperties = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
 UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
+scheduler = AsyncIOScheduler()
 
-# discord bot
+# get discord bot token from .env file
 load_dotenv()
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
@@ -106,31 +108,32 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 @bot.event
 async def on_ready():
+    channel = bot.get_channel(1094964978374672509)
     print(f'{bot.user.name} has connected to Discord!')
     print(f'{bot.user.name} is connected to the following guilds:\n')
     for guild in bot.guilds:
         print(guild)
+    scheduler.add_job(auto_rescrape, 'interval', hours=1, id="auto_rescrape")
+    scheduler.start()
+    await channel.send("auto scraping started")
 
 
 @bot.command(name='RMlatest', help='returns the last posted property found on rightmove')
 async def scrapeRM(ctx):
-    print('rightmoving')
     response = RMProperties.iloc[0]
     await ctx.send(response.to_string())
 
 @bot.command(name='UHlatest', help='returns the first property found on unihomes (note, not necessarily the most recent)')
 async def scrapeUH(ctx):
-    print('unihoming')
     response = UHProperties.iloc[0]
     await ctx.send(response.to_string())
 
 @bot.command(name='nuke',  help='deletes all messages in the channel (use with caution!)')
 async def nuke(ctx):
-    print('nuking')
     await ctx.channel.purge()
 
 @bot.command(name="RMupdate", help="checks for new properties on rightmove and adds them to the list (if any)")
-async def rescrape(ctx):
+async def RM_rescrape(ctx):
     global RMProperties 
     latest = UniHomesScraper(max_pppw, bedrooms).scrape()
     if (RMProperties.equals(RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape())):
@@ -143,7 +146,7 @@ async def rescrape(ctx):
         await ctx.send("added new properties on unihomes")
 
 @bot.command(name="UHupdate", help="checks for new properties on unihomes and adds them to the list (if any)")
-async def manual_rescrape(ctx):
+async def UH_rescrape(ctx):
     global UHProperties 
     latest = UniHomesScraper(max_pppw, bedrooms).scrape()
     if (UHProperties.equals(latest)):
@@ -164,7 +167,6 @@ async def unihomes(ctx):
 async def auto_rescrape_test(ctx):
     await auto_rescrape()
 
-
 async def auto_rescrape():
     channel = bot.get_channel(1095004643215560735)
 
@@ -178,27 +180,42 @@ async def auto_rescrape():
     new_RMproperties = RMlatest[~RMlatest.isin(RMProperties).dropna()]
     no_of_new_RM = len(new_RMproperties)
 
-    if (UHProperties.equals(UHlatest)):
-        await channel.send("no new properties on unihomes")
-    else:
+    if (UHProperties.equals(UHlatest) != True):
         await channel.send(str(no_of_new_UH) + "new properties found and added to unihomes:")
         await channel.send(new_UHproperties.to_string())
         UHProperties = UHlatest
     
-    if (RMProperties.equals(RMlatest)):
-        await channel.send("no new properties on rightmove")
-    else:
+    if ((RMProperties.equals(RMlatest)) != True):
         await channel.send(str(no_of_new_RM) + "new properties found and added to rightmove:")
         await channel.send(new_RMproperties.to_string())
         RMProperties = RMlatest
     
-    await channel.send("automatically refreshed properties. next update in 12h")
+    # await channel.send("automatically refreshed properties. next update in 1h")
 
-#scheduler to update properties every 12h
-scheduler = AsyncIOScheduler()
-scheduler.add_job(auto_rescrape, 'interval', hours=12)
-scheduler.start()
+# Command to check the current countdown until the next auto_rescrape run
+async def countdownTo():
+    # Get the next run time for all jobs in the scheduler
+    next_run_time = scheduler.get_job('auto_rescrape').next_run_time
+    if next_run_time:
+        # Calculate the time remaining until the next scheduled run
+        now = datetime.now(timezone.utc)
+        time_remaining = next_run_time - now
 
+        # Convert the time remaining to hours, minutes, and seconds
+        hours, remainder = divmod(time_remaining.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        # Format the time remaining as a string
+        time_remaining_str = f'Time remaining until next auto_rescrape: {hours} hours, {minutes} minutes, {seconds} seconds'
+
+        return time_remaining_str
+    else:
+        return "The auto_rescrape job has not been added to the scheduler yet."
+
+@bot.command(name="countdown", help="returns the time remaining until the next auto_rescrape run")
+async def countdown(ctx):
+    time_remaining_str = await countdownTo()
+    await ctx.send(time_remaining_str)
 
 bot.run(TOKEN)
-print('   hey :3')
+print('\nbot terminated')
