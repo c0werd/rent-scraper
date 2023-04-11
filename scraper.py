@@ -64,7 +64,7 @@ class RightmoveScraper:
         df['pricepm'] = df['pricepm'].astype(int)
         df['pricepw'] = df['pricepw'].astype(int)
         df.sort_values(by=['date_added'], ascending=False, inplace=True)
-        df['date_added'] = df['date_added'].dt.strftime('%d/%m/%Y')
+
 
         return df
 
@@ -95,10 +95,32 @@ class UniHomesScraper:
         df = pd.DataFrame(properties)
         return df
 
+def compare_dataframes(new_df, old_df, key_column):
+    """
+    Compare two dataframes based on a common key column and return rows found in new_df but not in old_df.
+    
+    Args:
+        new_df (pd.DataFrame): New dataframe.
+        old_df (pd.DataFrame): Old dataframe.
+        key_column (str): Common key column for comparison.
+    
+    Returns:
+        pd.DataFrame: Rows found in new_df but not in old_df.
+    """
+    # Merge dataframes using "left" join and indicator=True
+    merged = pd.merge(new_df, old_df, on=key_column, how='left', indicator=True)
+    # Select rows with left_only indicator
+    difference = merged[merged['_merge'] == 'left_only']
+    # Drop the merge indicator column
+    difference = difference.drop('_merge', axis=1)
+    return difference
+
+
 #get and store latest properties
 RMProperties = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
 UHProperties = UniHomesScraper(max_pppw, bedrooms).scrape()
 scheduler = AsyncIOScheduler()
+autoscrapecount = 0
 
 # get discord bot token from .env file
 load_dotenv()
@@ -169,29 +191,31 @@ async def auto_rescrape_test(ctx):
 
 async def auto_rescrape():
     channel = bot.get_channel(1095004643215560735)
+    global autoscrapecount
+    autoscrapecount += 1
+    print(f'auto scraping, count = {autoscrapecount}')
 
     global UHProperties 
     UHlatest = UniHomesScraper(max_pppw, bedrooms).scrape()
-    new_UHproperties = UHlatest[~UHlatest.isin(UHProperties).dropna()]
+    new_UHproperties = compare_dataframes(UHlatest, UHProperties, key_column='link')
     no_of_new_UH = len(new_UHproperties)
+
+    if (no_of_new_UH > 0):
+        await channel.send(str(no_of_new_UH) + " new properties found and added to unihomes:")
+        await channel.send(new_UHproperties.to_string())
+        UHProperties = UHlatest
+
 
     global RMProperties
     RMlatest = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
-    new_RMproperties = RMlatest[~RMlatest.isin(RMProperties).dropna()]
+    new_RMproperties = compare_dataframes(RMlatest, RMProperties, key_column='link')
     no_of_new_RM = len(new_RMproperties)
 
-    if (UHProperties.equals(UHlatest) != True):
-        await channel.send(str(no_of_new_UH) + "new properties found and added to unihomes:")
-        await channel.send(new_UHproperties.to_string())
-        UHProperties = UHlatest
-    
-    if ((RMProperties.equals(RMlatest)) != True):
-        await channel.send(str(no_of_new_RM) + "new properties found and added to rightmove:")
+    if (no_of_new_RM > 0):
+        await channel.send(str(no_of_new_RM) + " new properties found and added to rightmove:")
         await channel.send(new_RMproperties.to_string())
         RMProperties = RMlatest
     
-    # await channel.send("automatically refreshed properties. next update in 1h")
-
 # Command to check the current countdown until the next auto_rescrape run
 async def countdownTo():
     # Get the next run time for all jobs in the scheduler
