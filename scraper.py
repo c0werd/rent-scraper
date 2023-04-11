@@ -59,7 +59,7 @@ class RightmoveScraper:
         df['date_added'] = df['date_added'].replace('Added yesterday', yesterday.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Added today', today.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Reduced today', today.strftime('%d/%m/%Y'))
-        df['date_added'] = df['date_added'].replace('Reduced yesterday', today.strftime('%d/%m/%Y'))
+        df['date_added'] = df['date_added'].replace('Reduced yesterday', yesterday.strftime('%d/%m/%Y'))
         df['date_added'] = pd.to_datetime(df['date_added'], format='%d/%m/%Y')
         
         df['pricepm'] = df['pricepm'].astype(int)
