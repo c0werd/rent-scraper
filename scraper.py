@@ -59,6 +59,7 @@ class RightmoveScraper:
         df['date_added'] = df['date_added'].replace('Added yesterday', yesterday.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Added today', today.strftime('%d/%m/%Y'))
         df['date_added'] = df['date_added'].replace('Reduced today', today.strftime('%d/%m/%Y'))
+        df['date_added'] = df['date_added'].replace('Reduced yesterday', today.strftime('%d/%m/%Y'))
         df['date_added'] = pd.to_datetime(df['date_added'], format='%d/%m/%Y')
         
         df['pricepm'] = df['pricepm'].astype(int)
@@ -197,7 +198,7 @@ async def auto_rescrape():
 
     global UHProperties 
     UHlatest = UniHomesScraper(max_pppw, bedrooms).scrape()
-    new_UHproperties = compare_dataframes(UHlatest, UHProperties, key_column='link')
+    new_UHproperties = compare_dataframes(UHlatest, UHProperties, key_column='link').dropna(axis=1)
     no_of_new_UH = len(new_UHproperties)
 
     if (no_of_new_UH > 0):
@@ -208,7 +209,7 @@ async def auto_rescrape():
 
     global RMProperties
     RMlatest = RightmoveScraper(min_ppm, max_ppm, bedrooms).scrape()
-    new_RMproperties = compare_dataframes(RMlatest, RMProperties, key_column='link')
+    new_RMproperties = compare_dataframes(RMlatest, RMProperties, key_column='link').dropna(axis=1)
     no_of_new_RM = len(new_RMproperties)
 
     if (no_of_new_RM > 0):
