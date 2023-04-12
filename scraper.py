@@ -184,7 +184,25 @@ async def UH_rescrape(ctx):
 
 @bot.command(name="unihomes", help="returns all properties on unihomes")
 async def unihomes(ctx):
-    await ctx.send(UHProperties.to_string())
+    dfToPrint = UHProperties.dropna()
+    dfToPrint['link'] = '<' + dfToPrint['link'] + '>'
+    await ctx.send(dfToPrint.to_string())
+
+@bot.command(name="rightmove", help="returns all properties on rightmove")
+async def unihomes(ctx):
+    dfToPrint = RMProperties.dropna()
+    dfToPrint['link'] = '<' + dfToPrint['link'] + '>'
+    propNo = len(RMProperties.index)
+    startindex = 0
+    endindex = 0
+    for i in range(0, propNo//8+1):
+        startindex = i*8
+        endindex = (i+1)*8
+        if endindex >= propNo:
+            await ctx.send(dfToPrint.iloc[startindex:].to_string())
+        else:
+            await ctx.send(dfToPrint.iloc[startindex:endindex].to_string())
+
 
 @bot.command(name="autorescrapetest", help="tests the autorescrape function (use with caution!)")
 async def auto_rescrape_test(ctx):
