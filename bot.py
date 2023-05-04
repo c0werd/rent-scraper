@@ -4,6 +4,16 @@ from discord.ext import commands
 from tabulate import tabulate
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+"""
+Unihomes: Per person per week
+RightMove: Total per month, total per week
+
+Passed parameters: Per person per week
+
+Unihome caculations: Non
+
+Rightmove calculations: pppw * 4 * 4.34524 = pm
+"""
 
 class PropertyBot(commands.Bot):
     def __init__(self, command_prefix, intents, BOT_TOKEN, CHANNEL_ID, PASTEBIN_API_KEY, PASTEBIN_USERNAME, PASTEBIN_PASSWORD):
@@ -34,6 +44,11 @@ class PropertyBot(commands.Bot):
 
     def run_bot(self):
         self.run(self.BOT_TOKEN)
+
+    def add_parameters(self, max_ppw: int, num_bedrooms: int):
+        self.add_price_per_week(max_ppw)
+        self.add_num_bedrooms(num_bedrooms)
+        self.add_price_per_month(int(max_ppw * 4 * 4.34524))
     
     def add_price_per_week(self, ppw: int):
         self.max_price_per_week = ppw
@@ -45,6 +60,7 @@ class PropertyBot(commands.Bot):
         self.num_bedrooms = num_bedrooms
     
     def initialise_scrapers(self):
+
         self.RMscraper = RightMoveScraper(self.min_price_per_month, self.max_price_per_month, self.num_bedrooms)
         self.UHscraper = UniHomesScraper(self.min_price_per_week, self.max_price_per_week, self.num_bedrooms)
 
@@ -100,7 +116,7 @@ class PropertyBot(commands.Bot):
             "api_user_password": self.PB_PASSWORD
         }
         response = requests.post(self.PB_API_USERKEY_URL, data=POST_params)
-        self.PB_USERKEY = response
+        self.PB_USERKEY = response.text
 
     def generate_pastebin_paste(self, paste_code: str):
         POST_params = {

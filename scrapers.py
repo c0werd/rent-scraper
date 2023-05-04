@@ -17,15 +17,15 @@ class DataStorage:
         propertyId = property.getPropertyId()
         dateAdded = property.getDateAdded()
         pricepm = int(property.getPricePM())
-        pricepw = int(property.getPricePW())
+        priceppw = int(property.getPricePW())
         location = property.getLocation()
         link = property.getLink()
 
         self.properties.append({
             'propertyId': propertyId,
             'dateAdded': datetime.strptime(dateAdded, '%d/%m/%Y'),
-            'pricepm': pricepm,
-            'pricepw': pricepw,
+            'ppm': pricepm,
+            'pppw': priceppw,
             'location': location,
             'link': link
         })
@@ -83,11 +83,13 @@ class Property:
     def addDateAdded(self, date_added: str):
         self.date_added = date_added
 
-    def addPricePM(self, pricepm: int):
-        self.pricepm = pricepm
+    def addPricePM(self, pricepm: str):
+        self.pricepm = int(pricepm)
 
-    def addPricePW(self, pricepw: int):
-        self.pricepw = pricepw
+    def addPricePW(self, pricepw: str):
+        self.pricepw = int(pricepw)
+        if self.pricepm is None:
+            self.pricepm = int(self.pricepw * 4.43524 * 4)
 
     def addLocation(self, location: str):
         self.location = location
@@ -102,7 +104,7 @@ class Property:
             pricepm = self.pricepm
         if location is None:
             location = self.location
-        self.propertyId = f'{date[:2]}{pricepm[:2]}{location.replace(" ", "")[:2].upper()}'
+        self.propertyId = f'{date[:2]}{str(pricepm)[:2]}{location.replace(" ", "")[:2].upper()}'
 
     def getPropertyId(self) -> str:
         return self.propertyId
@@ -168,10 +170,12 @@ class RightMoveScraper(Scraper):
                 foundProperty = Property()
                 
                 pricepm = listing.find('span', class_='propertyCard-priceValue').text.replace("£", "").replace(",", "").replace("pcm", "").strip()
-                foundProperty.addPricePM(pricepm)
+                if pricepm != '':
+                    foundProperty.addPricePM(pricepm)
                 
                 pricepw = listing.find('span', class_='propertyCard-secondaryPriceValue').text.replace("£", "").replace(",", "").replace("pw", "").strip()
-                foundProperty.addPricePW(pricepw)
+                if pricepw != '':
+                    foundProperty.addPricePW(pricepw)
                 
                 link = "https://rightmove.co.uk" + listing.find('a', class_='propertyCard-link')['href']
                 foundProperty.addLink(link)
@@ -212,11 +216,8 @@ class UniHomesScraper(Scraper):
         for listing in property_listings:
             foundProperty = Property()
             
-            pricepw = math.ceil(float(listing.find('div', class_='property_details').find('span', class_="font-weight-700").text.replace("£", "")))
+            pricepw = listing.find('div', class_='property_details').find('span', class_="font-weight-700").text.replace("£", "")
             foundProperty.addPricePW(pricepw)
-
-            pricepm = str(math.ceil(pricepw * 4.34524))
-            foundProperty.addPricePM(pricepm)
 
             link = listing.find('a')['href']
             foundProperty.addLink(link)
