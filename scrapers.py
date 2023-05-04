@@ -11,6 +11,7 @@ class DataStorage:
     
     def __init__(self):
         self.properties = []
+        self.removed_properties = []
 
     def add_property(self, property: Property):
         propertyId = property.getPropertyId()
@@ -22,17 +23,28 @@ class DataStorage:
 
         self.properties.append({
             'propertyId': propertyId,
-            'dateAdded': dateAdded,
+            'dateAdded': datetime.strptime(dateAdded, '%d/%m/%Y'),
             'pricepm': pricepm,
             'pricepw': pricepw,
             'location': location,
             'link': link
         })
 
+    def remove_property(self, propertyID: str):
+        removed_property = [prop for prop in self.properties if prop['propertyId'] == propertyID]
+        self.removed_properties.append(removed_property)
+        self.properties = [prop for prop in self.properties if prop['propertyId'] != propertyID]
+        self.properties = sorted(self.properties, key=lambda k: k['dateAdded'], reverse=True)
+
+    def remove_all_properties(self):
+        self.removed_properties.append(self.properties)
+        self.properties = []
+
     def add_properties(self, properties: List[Property]) -> None:
         for property in properties:
-            if (property.getPricePM() != "") and (property.getPropertyId() not in [prop['propertyId'] for prop in self.properties]):
+            if (property.getPricePM() != "") and (property.getPropertyId() not in [prop['propertyId'] for prop in self.properties]) and (property.getPropertyId() not in [prop['propertyId'] for prop in self.removed_properties]):
                 self.add_property(property)
+        self.properties = sorted(self.properties, key=lambda k: k['dateAdded'], reverse=True)
 
     def check_new_properties(self, new_properties: List[Property]) -> List[Property]:
         existing_property_ids = [prop['propertyId'] for prop in self.properties]

@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, timezone
 import math
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pastebin import PastebinAPI
 
 
 
@@ -21,11 +20,9 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 PASTEBIN_API_KEY = os.getenv('PASTEBIN_API_KEY')
 PASTEBIN_USERNAME = os.getenv('PASTEBIN_USERNAME')
 PASTEBIN_PASSWORD = os.getenv('PASTEBIN_PASSWORD')
-PastebinAPI = PastebinAPI()
-PASTEBIN_SESSION_KEY = PastebinAPI.generate_user_key(PASTEBIN_API_KEY, PASTEBIN_USERNAME, PASTEBIN_PASSWORD)
 
 
-bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=BOT_TOKEN, CHANNEL_ID=CHANNEL_ID)
+bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=BOT_TOKEN, CHANNEL_ID=CHANNEL_ID, PASTEBIN_API_KEY=PASTEBIN_API_KEY, PASTEBIN_USERNAME=PASTEBIN_USERNAME, PASTEBIN_PASSWORD=PASTEBIN_PASSWORD)
 
 @bot.command(name='initialise', help="Initialises the bot with the given parameters: [max price per week] [number of bedrooms]")
 async def initialise(ctx, *args):
@@ -39,8 +36,10 @@ async def initialise(ctx, *args):
         max_price_per_month = 4.34524 * max_price_per_week
         bot.add_price_per_month(max_price_per_month)
         await ctx.send(f'Initialised with parameters: £{max_price_per_week} per person per week, {num_bedrooms} bedrooms, £{max_price_per_month} per person per month.')
+
         bot.initialise_scrapers()
-        
+        bot.generate_pastebin_user_key()
+
     except Exception as e:
         await ctx.send("Incorrect arguments. Please try again.")
         return
@@ -79,9 +78,17 @@ async def latest(ctx, arg1 = None):
     else: 
         latest(ctx, 21)
 
-@bot.command(name="showAllProperties", help="Displays all properties found in a pastebin link")
-async def showAllProperties(ctx):
-    PastebinAPI.paste(api_dev_key=PASTEBIN_API_KEY, api_user_key=PASTEBIN_SESSION_KEY, paste_name="All Properties", paste_code=bot.properties_to_string(bot.properties))
+@bot.command(name="allProperties", help="Generates a pastebin for all properties found")
+async def allProperties(ctx):
+    pastebin_url = bot.generate_pastebin_paste(bot.properties_to_string(bot.get_all_properties(), for_Discord=False)) 
+    await ctx.send(f'All properties found:\n{pastebin_url}')
 
-# Runs the bot
-print(PastebinAPI.paste(api_dev_key=PASTEBIN_API_KEY, api_user_key=PASTEBIN_SESSION_KEY, paste_name="All Properties", paste_code="penis penis test"))
+@bot.command(name="removeProperty", help="Removes a property from the list of properties found using ID")
+async def removeProperty(ctx, arg1):
+    try:
+        bot.remove_property(property_id=arg1)
+        await ctx.send(f'Removed property with ID {arg1}')
+    except:
+        await ctx.send(f'Could not remove property with ID {arg1}')
+
+bot.run_bot()
