@@ -15,14 +15,15 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 load_dotenv()
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')
-CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
+COMMAND_CHANNEL_ID = int(os.getenv('COMMAND_CHANNEL_ID'))
+UPDATE_CHANNEL_ID = int(os.getenv('UPDATE_CHANNEL_ID'))
 
 PASTEBIN_API_KEY = os.getenv('PASTEBIN_API_KEY')
 PASTEBIN_USERNAME = os.getenv('PASTEBIN_USERNAME')
 PASTEBIN_PASSWORD = os.getenv('PASTEBIN_PASSWORD')
 
 
-bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=BOT_TOKEN, CHANNEL_ID=CHANNEL_ID, PASTEBIN_API_KEY=PASTEBIN_API_KEY, PASTEBIN_USERNAME=PASTEBIN_USERNAME, PASTEBIN_PASSWORD=PASTEBIN_PASSWORD)
+bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=BOT_TOKEN, COMMAND_CHANNEL_ID=COMMAND_CHANNEL_ID, UPDATE_CHANNEL_ID=UPDATE_CHANNEL_ID, PASTEBIN_API_KEY=PASTEBIN_API_KEY, PASTEBIN_USERNAME=PASTEBIN_USERNAME, PASTEBIN_PASSWORD=PASTEBIN_PASSWORD)
 
 @bot.command(name='initialise', help="Initialises the bot with the given parameters: [max price per week] [number of bedrooms] [number of people]")
 async def initialise(ctx, *args):
