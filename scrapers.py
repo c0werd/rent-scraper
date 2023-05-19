@@ -8,12 +8,22 @@ from datetime import datetime, timedelta
 
 
 class DataStorage:
+    """Class to store the properties found by the bot
+    """
     
     def __init__(self):
+        """Initialises the DataStorage object
+        """
         self.properties = []
         self.removed_properties = []
 
     def add_property(self, property: Property):
+        """Adds the given property to the properties list
+
+        Args:
+            property (Property): The property to be added to the properties list
+        """
+
         propertyId = property.getPropertyId()
         dateAdded = property.getDateAdded()
         pricepm = int(property.getPricePM())
@@ -72,9 +82,12 @@ class Scraper:
     
 # Property class
 class Property:
+    # The number of weeks in a month
+    weeks_per_month = 4.43524
 
-    def __init__(self):
+    def __init__(self, num_people: int):
         self.date_added = None
+        self.num_people = num_people
         pass
 
     def __str__(self):
@@ -89,7 +102,7 @@ class Property:
     def addPricePW(self, pricepw: str):
         self.pricepw = int(pricepw)
         if self.pricepm is None:
-            self.pricepm = int(self.pricepw * 4.43524 * 4)
+            self.pricepm = int(self.pricepw * Property.weeks_per_month * self.num_people)
 
     def addLocation(self, location: str):
         self.location = location
@@ -127,11 +140,12 @@ class Property:
 
 class RightMoveScraper(Scraper):
 
-    def __init__(self, min_price_per_month: int, max_price_per_month: int, num_bedrooms):
+    def __init__(self, min_price_per_month: int, max_price_per_month: int, num_bedrooms: int, num_people: int):
         super().__init__()
         self.min_price = min_price_per_month
         self.max_price = max_price_per_month
         self.num_bedrooms = num_bedrooms
+        self.num_people = num_people
         
         self.url = f'https://www.rightmove.co.uk/property-to-rent/find.html?locationIdentifier=STATION%5E9662&sortType=6&savedSearchId=46395805&maxBedrooms={self.num_bedrooms}&minBedrooms={self.num_bedrooms}&maxPrice={self.max_price}&minPrice={self.min_price}&radius=5&includeLetAgreed=false&letType=student&furnishTypes=furnished'
         self.soup = self.get_page_soup(self.url)
@@ -167,7 +181,7 @@ class RightMoveScraper(Scraper):
 
             property_listings = page_soup.find_all('div', class_='l-searchResult')
             for listing in property_listings:
-                foundProperty = Property()
+                foundProperty = Property(self.num_people)
                 
                 pricepm = listing.find('span', class_='propertyCard-priceValue').text.replace("£", "").replace(",", "").replace("pcm", "").strip()
                 if pricepm != '':
@@ -195,11 +209,12 @@ class RightMoveScraper(Scraper):
 
 class UniHomesScraper(Scraper):
 
-    def __init__(self, min_price, max_price, num_bedrooms):
+    def __init__(self, min_price: int, max_price: int, num_bedrooms: int, num_people: int):
         super().__init__()
         self.min_price = min_price
         self.max_pppw = max_price
         self.num_bedrooms = num_bedrooms
+        self.num_people = num_people
         
         self.url = f'https://www.unihomes.co.uk/student-accommodation/london/near-kings-college-london?bedrooms={self.num_bedrooms}&max-price={self.max_pppw}'
         self.soup = self.get_page_soup(self.url)
@@ -214,7 +229,7 @@ class UniHomesScraper(Scraper):
         properties_found = []
         property_listings = self.soup.find_all('div', class_='property-listing-column')
         for listing in property_listings:
-            foundProperty = Property()
+            foundProperty = Property(self.num_people)
             
             pricepw = listing.find('div', class_='property_details').find('span', class_="font-weight-700").text.replace("£", "")
             foundProperty.addPricePW(pricepw)
@@ -228,7 +243,7 @@ class UniHomesScraper(Scraper):
             date_added = self.today.strftime('%d/%m/%Y')
             foundProperty.addDateAdded(date_added)
 
-            foundProperty.addPropertyId(date_added, pricepm, location)
+            foundProperty.addPropertyId(date_added, None, location)
 
             properties_found.append(foundProperty)
 

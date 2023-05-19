@@ -24,22 +24,23 @@ PASTEBIN_PASSWORD = os.getenv('PASTEBIN_PASSWORD')
 
 bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=BOT_TOKEN, CHANNEL_ID=CHANNEL_ID, PASTEBIN_API_KEY=PASTEBIN_API_KEY, PASTEBIN_USERNAME=PASTEBIN_USERNAME, PASTEBIN_PASSWORD=PASTEBIN_PASSWORD)
 
-@bot.command(name='initialise', help="Initialises the bot with the given parameters: [max price per week] [number of bedrooms]")
+@bot.command(name='initialise', help="Initialises the bot with the given parameters: [max price per week] [number of bedrooms] [number of people]")
 async def initialise(ctx, *args):
-    # try:
+    try:
         max_price_per_week = int(args[0])
         num_bedrooms = int(args[1])
-        bot.add_parameters(max_ppw=max_price_per_week, num_bedrooms=num_bedrooms)
+        num_ppl = int(args[2])
+        bot.add_parameters(max_ppw=max_price_per_week, num_bedrooms=num_bedrooms, num_ppl=num_ppl)
 
         await ctx.send(f'Initialised with parameters: £{max_price_per_week} per person per week, {num_bedrooms} bedrooms, £{str(int(max_price_per_week * 4 * 4.34524))} per person per month.')
 
         bot.initialise_scrapers()
         bot.generate_pastebin_user_key()
 
-    # except Exception as e:
-    #     print(e)
-    #     await ctx.send("Incorrect arguments. Please try again.")
-    #     return
+    except Exception as e:
+        print(e)
+        await ctx.send("Incorrect arguments. Please try again.")
+        return
 
 @bot.command(name='countdown', help="Displays countdown to next scrape")
 async def countdownTo(ctx) -> str:
