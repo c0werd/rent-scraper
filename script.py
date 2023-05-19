@@ -27,7 +27,7 @@ bot = PropertyBot(command_prefix='!', intents=discord.Intents.all(), BOT_TOKEN=B
 
 @bot.command(name='initialise', help="Initialises the bot with the given parameters: [max price per week] [number of bedrooms] [number of people]")
 async def initialise(ctx, *args):
-    try:
+    # try:
         max_price_per_week = int(args[0])
         num_bedrooms = int(args[1])
         num_ppl = int(args[2])
@@ -38,10 +38,10 @@ async def initialise(ctx, *args):
         bot.initialise_scrapers()
         bot.generate_pastebin_user_key()
 
-    except Exception as e:
-        print(e)
-        await ctx.send("Incorrect arguments. Please try again.")
-        return
+    # except Exception as e:
+    #     print(e)
+    #     await ctx.send("Incorrect arguments. Please try again.")
+    #     return
 
 @bot.command(name='countdown', help="Displays countdown to next scrape")
 async def countdownTo(ctx) -> str:

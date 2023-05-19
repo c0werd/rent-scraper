@@ -49,12 +49,13 @@ class PropertyBot(commands.Bot):
         self.PB_API_KEY = PASTEBIN_API_KEY
         self.PB_USERNAME = PASTEBIN_USERNAME
         self.PB_PASSWORD = PASTEBIN_PASSWORD
-        self.command_channel = self.get_channel(self.COMMAND_CHANNEL_ID)
-        self.update_channel = self.get_channel(self.UPDATE_CHANNEL_ID)
-
+        
     async def on_ready(self):
         """Prints the bot's name and guilds to the console when the bot is ready to use
         """
+        
+        self.command_channel = self.get_channel(self.COMMAND_CHANNEL_ID)
+        self.update_channel = self.get_channel(self.UPDATE_CHANNEL_ID)
 
         print(f'{self.user.name} has connected to Discord!')
         print(f'{self.user.name} is connected to the following guilds:\n')

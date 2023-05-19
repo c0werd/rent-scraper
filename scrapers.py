@@ -88,6 +88,8 @@ class Property:
     def __init__(self, num_people: int):
         self.date_added = None
         self.num_people = num_people
+        self.pricepm = None
+        self.pricepw = None
         pass
 
     def __str__(self):
@@ -100,7 +102,7 @@ class Property:
         self.pricepm = int(pricepm)
 
     def addPricePW(self, pricepw: str):
-        self.pricepw = int(pricepw)
+        self.pricepw = math.ceil(float(pricepw))
         if self.pricepm is None:
             self.pricepm = int(self.pricepw * Property.weeks_per_month * self.num_people)
 
@@ -231,7 +233,7 @@ class UniHomesScraper(Scraper):
         for listing in property_listings:
             foundProperty = Property(self.num_people)
             
-            pricepw = listing.find('div', class_='property_details').find('span', class_="font-weight-700").text.replace("£", "")
+            pricepw = listing.find('div', class_='property_details').find('span', class_="font-weight-700").text.replace("£", "").strip()
             foundProperty.addPricePW(pricepw)
 
             link = listing.find('a')['href']
