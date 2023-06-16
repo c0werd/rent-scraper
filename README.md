@@ -2,8 +2,8 @@
 - Add support for multiple-page UniHomes scraping
 - Add support for Zoopla scraping
 - Host on Heroku
+- Change storage from local storage to MongoDB or MySQL
 
-There are so many errors this thing don't work at all!!!
 # Discord Web Scraper Property Finding Bot
 
 ## Summary
