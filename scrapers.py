@@ -1,6 +1,5 @@
 from __future__ import annotations
 import math
-import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 from typing import List
